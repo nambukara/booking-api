@@ -1,14 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingStatus } from './enums/booking-status.enum';
+import { BookingsRepository } from './bookings.repository';
+import { Booking, Prisma } from '../../generated/prisma/client';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private repository: BookingsRepository,
+    private prisma: PrismaService,
+  ) {}
 
-  async create(createBookingDto: CreateBookingDto) {
+  async create(createBookingDto: CreateBookingDto): Promise<Booking> {
     // Rule 1: A booking must belong to an existing service
     const service = await this.prisma.service.findUnique({
       where: { id: createBookingDto.serviceId },
@@ -29,7 +35,7 @@ export class BookingsService {
     }
 
     // Rule 3: Prevent duplicate bookings for same service and time
-    const existingBookings = await this.prisma.booking.findMany({
+    const existingBookings = await this.repository.findMany({
       where: {
         service_id: createBookingDto.serviceId,
         booking_date: new Date(createBookingDto.bookingDate),
@@ -52,27 +58,25 @@ export class BookingsService {
       throw new BadRequestException('This time slot is already booked for the selected service');
     }
 
-    return this.prisma.booking.create({
-      data: {
-        customer_name: createBookingDto.customerName,
-        customer_email: createBookingDto.customerEmail,
-        customer_phone: createBookingDto.customerPhone,
-        service_id: createBookingDto.serviceId,
-        booking_date: new Date(createBookingDto.bookingDate),
-        booking_time: new Date(createBookingDto.bookingTime),
-        notes: createBookingDto.notes,
-      },
+    return this.repository.create({
+      customer_name: createBookingDto.customerName,
+      customer_email: createBookingDto.customerEmail,
+      customer_phone: createBookingDto.customerPhone,
+      service: { connect: { id: createBookingDto.serviceId } },
+      booking_date: new Date(createBookingDto.bookingDate),
+      booking_time: new Date(createBookingDto.bookingTime),
+      notes: createBookingDto.notes,
     });
   }
 
 
-  async findAll(page: number, limit: number, search?: string, status?: string) {
+  async findAll(page: number, limit: number, search?: string, status?: string): Promise<PaginatedResult<Booking>> {
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.BookingWhereInput = {};
 
     if (status) {
-      where.status = status;
+      where.status = status as any;
     }
 
     if (search) {
@@ -84,14 +88,14 @@ export class BookingsService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.booking.findMany({
+      this.repository.findMany({
         where,
         skip,
         take: limit,
         include: { service: true },
         orderBy: { id: 'desc' },
       }),
-      this.prisma.booking.count({ where }),
+      this.repository.count({ where }),
     ]);
 
     return {
@@ -105,8 +109,8 @@ export class BookingsService {
     };
   }
 
-  async findOne(id: number) {
-    const booking = await this.prisma.booking.findUnique({
+  async findOne(id: number): Promise<Booking> {
+    const booking = await this.repository.findUnique({
       where: { id },
       include: { service: true }
     });
@@ -116,7 +120,7 @@ export class BookingsService {
     return booking;
   }
 
-  async updateStatus(id: number, updateBookingStatusDto: UpdateBookingStatusDto) {
+  async updateStatus(id: number, updateBookingStatusDto: UpdateBookingStatusDto): Promise<Booking> {
     const booking = await this.findOne(id);
 
     // Rule 3: Cancelled bookings cannot be marked as completed
@@ -124,15 +128,14 @@ export class BookingsService {
       throw new BadRequestException('Cancelled bookings cannot be marked as completed');
     }
 
-    return this.prisma.booking.update({
+    return this.repository.update({
       where: { id },
       data: { status: updateBookingStatusDto.status as any },
     });
   }
 
-  async remove(id: number) {
+  async remove(id: number): Promise<Booking> {
     await this.findOne(id);
-    return this.prisma.booking.delete({ where: { id } });
+    return this.repository.delete({ where: { id } });
   }
 }
-

@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Query, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('Bookings')
 @Controller('bookings')
@@ -21,12 +22,11 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard)
   @Get()
   findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query() paginationQuery: PaginationQueryDto,
     @Query('search') search?: string,
     @Query('status') status?: string,
   ) {
-    return this.bookingsService.findAll(page, limit, search, status);
+    return this.bookingsService.findAll(paginationQuery.page, paginationQuery.limit, search, status);
   }
 
   @UseGuards(JwtAuthGuard)
