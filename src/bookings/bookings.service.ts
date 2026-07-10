@@ -1,13 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { BookingStatus } from './enums/booking-status.enum';
 
 @Injectable()
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createBookingDto: CreateBookingDto) {
+    // Rule 1: A booking must belong to an existing service
+    const service = await this.prisma.service.findUnique({
+      where: { id: createBookingDto.serviceId },
+    });
+    if (!service) {
+      throw new NotFoundException(`Service with ID ${createBookingDto.serviceId} not found`);
+    }
+
+    // Rule 2: Booking dates cannot be in the past
+    const bookingDate = new Date(createBookingDto.bookingDate);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Compare dates without time
+    const incomingDate = new Date(bookingDate);
+    incomingDate.setHours(0, 0, 0, 0);
+
+    if (incomingDate < now) {
+      throw new BadRequestException('Booking dates cannot be in the past');
+    }
+
     return this.prisma.booking.create({
       data: {
         customer_name: createBookingDto.customerName,
@@ -20,6 +40,7 @@ export class BookingsService {
       },
     });
   }
+
 
   async findAll() {
     return this.prisma.booking.findMany({ include: { service: true } });
@@ -37,10 +58,16 @@ export class BookingsService {
   }
 
   async updateStatus(id: number, updateBookingStatusDto: UpdateBookingStatusDto) {
-    await this.findOne(id);
+    const booking = await this.findOne(id);
+
+    // Rule 3: Cancelled bookings cannot be marked as completed
+    if (booking.status === BookingStatus.CANCELLED && updateBookingStatusDto.status === BookingStatus.COMPLETED) {
+      throw new BadRequestException('Cancelled bookings cannot be marked as completed');
+    }
+
     return this.prisma.booking.update({
       where: { id },
-      data: { status: updateBookingStatusDto.status },
+      data: { status: updateBookingStatusDto.status as any },
     });
   }
 
