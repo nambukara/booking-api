@@ -66,17 +66,32 @@ export class BookingsService {
   }
 
 
-  async findAll(page: number, limit: number) {
+  async findAll(page: number, limit: number, search?: string, status?: string) {
     const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { customer_name: { contains: search, mode: 'insensitive' } },
+        { customer_email: { contains: search, mode: 'insensitive' } },
+        { customer_phone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.booking.findMany({
+        where,
         skip,
         take: limit,
         include: { service: true },
         orderBy: { id: 'desc' },
       }),
-      this.prisma.booking.count(),
+      this.prisma.booking.count({ where }),
     ]);
 
     return {
