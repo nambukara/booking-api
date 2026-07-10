@@ -6,7 +6,7 @@ import { BookingStatus } from './enums/booking-status.enum';
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(createBookingDto: CreateBookingDto) {
     // Rule 1: A booking must belong to an existing service
@@ -26,6 +26,30 @@ export class BookingsService {
 
     if (incomingDate < now) {
       throw new BadRequestException('Booking dates cannot be in the past');
+    }
+
+    // Rule 3: Prevent duplicate bookings for same service and time
+    const existingBookings = await this.prisma.booking.findMany({
+      where: {
+        service_id: createBookingDto.serviceId,
+        booking_date: new Date(createBookingDto.bookingDate),
+        status: {
+          not: BookingStatus.CANCELLED,
+        },
+      },
+    });
+
+    const incomingTime = new Date(createBookingDto.bookingTime);
+    const incomingHours = incomingTime.getHours();
+    const incomingMinutes = incomingTime.getMinutes();
+
+    const isDuplicate = existingBookings.some((b) => {
+      const existingTime = new Date(b.booking_time);
+      return existingTime.getHours() === incomingHours && existingTime.getMinutes() === incomingMinutes;
+    });
+
+    if (isDuplicate) {
+      throw new BadRequestException('This time slot is already booked for the selected service');
     }
 
     return this.prisma.booking.create({
