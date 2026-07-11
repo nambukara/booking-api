@@ -1,100 +1,87 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# EN2H Booking Platform REST API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Project Overview
+This project is a RESTful API built with **NestJS**, **TypeScript**, and **PostgreSQL** using **Prisma ORM**. It was developed as a technical assignment for the EN2H Software Engineer Intern position. The API allows authenticated administrators to manage available services while enabling unauthenticated customers to book appointments dynamically. 
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The architecture strictly adheres to enterprise NestJS standards, featuring the **Repository Pattern** to decouple database interactions from core business logic, strongly typed Data Transfer Objects (DTOs), and centralized global exception handling.
 
-## Description
+## Installation Steps
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-link>
+   cd booking-api
+   ```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## Project setup
+## Environment Variables
+The application relies on environment variables for configuration. A template file has been provided.
 
+1. Copy the example file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open `.env` and fill in your actual PostgreSQL connection string and a secure JWT Secret:
+   ```env
+   PORT=3000
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/booking_platform?schema=public"
+   JWT_SECRET=your_super_secret_jwt_key
+   JWT_EXPIRES=1d
+   ```
+
+## Database Setup & Running Migrations
+This project uses **Prisma** to manage the database schema.
+
+1. Ensure your PostgreSQL instance is running.
+2. Push the schema to the database (or run migrations):
+   ```bash
+   npx prisma migrate dev --name init
+   ```
+3. Generate the Prisma Client:
+   ```bash
+   npx prisma generate
+   ```
+
+## Running the Application
+
+**Using Docker (Recommended)**
+You can easily spin up both the API and a PostgreSQL database using Docker Compose:
 ```bash
-$ npm install
+docker-compose up -d --build
 ```
 
-## Compile and run the project
-
+**Running Locally**
+To run the NestJS server locally on your machine:
 ```bash
 # development
-$ npm run start
+npm run start
 
 # watch mode
-$ npm run start:dev
+npm run start:dev
 
 # production mode
-$ npm run start:prod
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+## API Documentation
+The API is fully documented using **Swagger UI**. 
+Once the application is running, navigate to:
+**[http://localhost:3000/api](http://localhost:3000/api)**
 
-```bash
-# unit tests
-$ npm run test
+You will find a complete interactive layout of all endpoints, required payloads, and schemas. You can use the "Authorize" button to inject your JWT token and test protected endpoints directly from the browser!
 
-# e2e tests
-$ npm run test:e2e
+## Assumptions Made
+1. **Service Independence**: A booking must belong to one valid service. The system verifies service existence before allowing a booking.
+2. **Timezones**: All incoming dates and times are handled in UTC to avoid local server timezone conflicts when comparing against the current date.
+3. **Public Booking**: Anyone can hit the `POST /bookings` endpoint to create a booking without needing an account. However, managing those bookings and managing services is restricted to authenticated admins via a Bearer JWT Token.
+4. **Duplicate Prevention**: If a user attempts to book the exact same service on the exact same date and exact same time as a non-cancelled existing booking, the request is rejected with a 409 Conflict.
 
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
-## ------------------------
+## Future Improvements
+1. **Testing**: Expand the Jest testing suite to include comprehensive E2E tests for the Booking duplicate prevention logic using a mock database.
+2. **Role-Based Access Control (RBAC)**: Currently, any authenticated user acts as an admin. Implementing `@Roles('ADMIN')` guards would allow for customer accounts in the future.
+3. **Automated Reminders**: Integrate a queuing system like BullMQ to send automated email/SMS reminders 24 hours before a `CONFIRMED` booking.
+4. **Soft Deletes**: Implement soft deletion (setting a `deleted_at` timestamp instead of physically removing records) to preserve historical analytical data for deleted services.

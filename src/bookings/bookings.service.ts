@@ -4,7 +4,7 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingStatus } from './enums/booking-status.enum';
 import { BookingsRepository } from './bookings.repository';
-import { Booking, Prisma } from '../../generated/prisma/client';
+import { Booking, Prisma } from '@prisma/client';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class BookingsService {
   constructor(
     private repository: BookingsRepository,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   async create(createBookingDto: CreateBookingDto): Promise<Booking> {
     // Rule 1: A booking must belong to an existing service
